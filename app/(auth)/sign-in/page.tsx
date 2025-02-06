@@ -1,48 +1,30 @@
-import Link from "next/link";
+import { Inter } from "next/font/google";
+import Image from "next/image";
 
-import * as settings from "@/lib/settings";
+import SignInForm from "./sign-in-form";
 
-import { Title } from "../common";
-import GoogleSignIn from "../google-sign-in";
+const inter = Inter({ subsets: ["latin"] });
 
-import SignIn from "./sign-in";
-
-export default async function SignInPage({ searchParams }: { searchParams: Promise<{ redirectTo?: string }> }) {
-  const { redirectTo } = await searchParams;
-  const signUpUrl = new URL("/sign-up", settings.BASE_URL);
-  if (redirectTo) {
-    signUpUrl.searchParams.set("redirectTo", redirectTo);
-  }
-
+export default function SignIn() {
   return (
-    <>
-      <Title className="mb-12">
-        Welcome back.
-        <br />
-        Log in to your account below.
-      </Title>
-
-      <div className="flex flex-col items-center w-full">
-        <GoogleSignIn redirectTo={redirectTo} />
+    <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-[#f8f9fa]">
+      <div className="w-full max-w-[400px] space-y-8">
+        <div className="flex flex-col items-center">
+          <div className="w-[300px] h-[150px] mb-8 relative">
+            <Image
+              src="/logos/grey-matter-logo.png"
+              alt="Grey Matter Group"
+              fill
+              sizes="(max-width: 300px) 100vw, 300px"
+              priority
+              className="object-contain"
+            />
+          </div>
+          <h2 className={`${inter.className} text-2xl font-semibold`}>Welcome back</h2>
+          <p className={`${inter.className} text-gray-600`}>Log in to your account below</p>
+        </div>
+        <SignInForm />
       </div>
-
-      <div className=" flex flex-col items-center mb-12 w-full relative">
-        <hr className="w-full" />
-        <div className="absolute top-[-24px] bg-white p-3 text-center text-[#74747A]">or</div>
-      </div>
-
-      <SignIn redirectTo={redirectTo} />
-
-      <Link href="/reset" className="text-[#D946EF] text-[16px] mt-6 hover:underline">
-        Forgot password?
-      </Link>
-
-      <div className="mt-6 text-[16px]">
-        <span className="text-[#74747A]">Need to create a new organization?&nbsp;</span>
-        <Link href={signUpUrl.toString()} className="text-[#D946EF] hover:underline">
-          Sign up
-        </Link>
-      </div>
-    </>
+    </div>
   );
 }

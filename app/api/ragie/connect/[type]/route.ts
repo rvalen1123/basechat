@@ -19,7 +19,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<P
 
   const payload = await client.connections.createOAuthRedirectUrl({
     redirectUri: [settings.BASE_URL, "api/ragie/callback"].join("/"),
-    sourceType: type as ConnectorSource | undefined,
+    sourceType: "google_drive",
     partition: tenant.id,
     theme: "light",
   });

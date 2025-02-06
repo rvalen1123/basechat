@@ -1,18 +1,11 @@
-"use client";
-
 import { Inter } from "next/font/google";
-import { useRouter } from "next/navigation";
-import { z } from "zod";
 
-import ChatInput from "@/components/chatbot/chat-input";
 import * as schema from "@/lib/db/schema";
 import { getInitials } from "@/lib/utils";
 
-import { useGlobalState } from "./context";
+import WelcomeClient from "./welcome-client";
 
 const inter = Inter({ subsets: ["latin"] });
-
-const conversationResponseSchema = z.object({ id: z.string() });
 
 interface Props {
   tenant: typeof schema.tenants.$inferSelect;
@@ -20,52 +13,25 @@ interface Props {
 }
 
 export default function Welcome({ tenant, className }: Props) {
-  const router = useRouter();
-  const { setInitialMessage } = useGlobalState();
-
-  const handleSubmit = async (content: string) => {
-    const res = await fetch("/api/conversations", { method: "POST", body: JSON.stringify({ title: content }) });
-    if (!res.ok) throw new Error("Could not create conversation");
-
-    const json = await res.json();
-    const conversation = conversationResponseSchema.parse(json);
-    setInitialMessage(content);
-    router.push(`/conversations/${conversation.id}`);
-  };
-
   const initials = getInitials(tenant.name);
-
   const questions = [
-    tenant.question1 || "Sample question. Lorem ipsum dolor sit amet consectetur. Sample question.",
-    tenant.question2 || "Sample question. Lorem ipsum dolor sit amet consectetur. Sample question.",
-    tenant.question3 || "Sample question. Lorem ipsum dolor sit amet consectetur. Sample question.",
+    tenant.question1 || "What are our current active deals and their status?",
+    tenant.question2 || "Can you summarize our company's investment strategy?",
+    tenant.question3 || "What are the key points from our latest executive meeting?",
   ];
 
   return (
-    <div className={className}>
-      <div className={`h-full flex flex-col justify-center ${inter.className}`}>
-        <div className="h-[100px] w-[100px] avatar rounded-[50px] text-white flex items-center justify-center font-bold text-[32px] mb-8">
-          {initials}
+    <div className={className} suppressHydrationWarning>
+      <div className={`h-full flex flex-col justify-center ${inter.className}`} suppressHydrationWarning>
+        <div className="h-[100px] mb-8">
+          <img src="/logos/PNG-01.png" alt="Grey Matter Group" className="h-full w-auto" />
         </div>
         <h1 className="mb-12 text-[40px] font-bold leading-[50px]">
-          Hello, I&apos;m {tenant.name}&apos;s AI.
+          Welcome to Grey Matter Group AI
           <br />
-          What would you like to know?
+          How can I assist you today?
         </h1>
-        <div className="flex items-start justify-evenly space-x-2">
-          {questions.map((question, i) => (
-            <div
-              key={i}
-              className="rounded-md border p-4 h-full w-1/3 cursor-pointer"
-              onClick={() => handleSubmit(question)}
-            >
-              {question}
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="w-full flex flex-col items-center p-2 pl-4 rounded-[24px] border border-[#D7D7D7]">
-        <ChatInput handleSubmit={handleSubmit} />
+        <WelcomeClient tenant={tenant} questions={questions} />
       </div>
     </div>
   );

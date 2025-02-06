@@ -92,6 +92,7 @@ export const AutosizeTextarea = React.forwardRef<AutosizeTextAreaRef, AutosizeTe
         {...props}
         value={value}
         ref={textAreaRef}
+        suppressHydrationWarning
         className={cn(
           "w-full max-h-[100px] resize-none overflow-y-auto border-0 focus:outline-none focus:border-none",
           className,

@@ -1,53 +1,35 @@
-import assert from "assert";
+import crypto from "crypto";
 
-import { eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
 
-import db from "@/lib/db";
-import * as schema from "@/lib/db/schema";
-import { validateSignature } from "@/lib/server-utils";
+import { getRagieClient } from "@/lib/ragie";
 import { saveConnection } from "@/lib/service";
-import { RAGIE_WEBHOOK_SECRET } from "@/lib/settings";
-
-interface WebhookEvent {
-  type: string;
-  payload: any;
-}
+import * as settings from "@/lib/settings";
 
 export async function POST(request: NextRequest) {
-  const signature = request.headers.get("x-signature");
+  const signature = request.headers.get("x-ragie-signature");
   if (!signature) {
-    return Response.json({ message: "missing signature" }, { status: 400 });
+    return new Response("Missing signature", { status: 401 });
   }
 
-  const buffer = await request.arrayBuffer();
+  const rawBody = await request.text();
+  const hmac = crypto.createHmac("sha256", settings.RAGIE_WEBHOOK_SECRET);
+  const digest = hmac.update(rawBody).digest("base64");
 
-  const isValid = await validateSignature(RAGIE_WEBHOOK_SECRET, buffer, signature);
-  if (!isValid) {
-    return Response.json({ message: "invalid signature" }, { status: 400 });
+  if (digest !== signature) {
+    return new Response("Invalid signature", { status: 401 });
   }
 
-  const event = JSON.parse(new TextDecoder("utf-8").decode(buffer)) as WebhookEvent;
+  const payload = JSON.parse(rawBody);
+  if (payload.type === "connection.updated") {
+    const connection = await getRagieClient().connections.get({
+      connectionId: payload.data.connection_id,
+    });
 
-  // Ignore all other webhooks
-  if (
-    event.type !== "connection_sync_started" &&
-    event.type !== "connection_sync_progress" &&
-    event.type !== "connection_sync_finished"
-  ) {
-    return Response.json({ message: "success" });
+    if (connection) {
+      await saveConnection(payload.data.partition, payload.data.connection_id, payload.data.status);
+    }
   }
 
-  const status =
-    event.type === "connection_sync_started" || event.type === "connection_sync_progress" ? "syncing" : "ready";
-
-  // FIXME: This fails if we don't already know about the connection
-  const rs = await db
-    .select()
-    .from(schema.connections)
-    .where(eq(schema.connections.ragieConnectionId, event.payload.connection_id));
-  assert(rs.length === 1, "failed connection lookup");
-  await saveConnection(rs[0].tenantId, event.payload.connection_id, status);
-
-  return Response.json({ message: "success" });
+  return new Response("OK", { status: 200 });
 }
