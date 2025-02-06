@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 import { cn } from "@/lib/utils";
 
 import { GlobalStateProvider } from "./(main)/context";
+import { Providers } from "./providers";
 
 import "./globals.css";
 
@@ -31,28 +32,30 @@ export default function RootLayout({
 }>) {
   return (
     <SessionProvider>
-      <GlobalStateProvider>
-        <html lang="en" className="h-full w-full">
-          <head>
-            <link rel="icon" href="/logos/PNG-01.png" />
-          </head>
-          <body className={cn("min-h-screen bg-background font-sans antialiased h-full w-full", fontSans.variable)}>
-            {children}
-            <Toaster
-              position="bottom-center"
-              toastOptions={{
-                classNames: {
-                  toast: "bg-background text-foreground border border-border shadow-lg",
-                  title: "text-sm font-medium",
-                  description: "text-sm text-muted-foreground",
-                  actionButton: "bg-primary text-primary-foreground",
-                  cancelButton: "bg-muted text-muted-foreground",
-                },
-              }}
-            />
-          </body>
-        </html>
-      </GlobalStateProvider>
+      <Providers>
+        <GlobalStateProvider>
+          <html lang="en" className="h-full w-full">
+            <head>
+              <link rel="icon" href="/logos/PNG-01.png" />
+            </head>
+            <body className={cn("min-h-screen bg-background font-sans antialiased h-full w-full", fontSans.variable)}>
+              {children}
+              <Toaster
+                position="bottom-center"
+                toastOptions={{
+                  classNames: {
+                    toast: "bg-background text-foreground border border-border shadow-lg",
+                    title: "text-sm font-medium",
+                    description: "text-sm text-muted-foreground",
+                    actionButton: "bg-primary text-primary-foreground",
+                    cancelButton: "bg-muted text-muted-foreground",
+                  },
+                }}
+              />
+            </body>
+          </html>
+        </GlobalStateProvider>
+      </Providers>
     </SessionProvider>
   );
 }

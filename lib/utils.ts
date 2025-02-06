@@ -15,10 +15,8 @@ export function getInitials(name: string): string {
   const words = name.split(/\s+/).filter((word) => word.trim().length > 0);
 
   // Get the first character of up to two words
-  const initials = words
+  return words
     .slice(0, 2)
     .map((word) => word.charAt(0).toUpperCase())
     .join("");
-
-  return initials;
 }

@@ -2,6 +2,7 @@ import type { NextAuthConfig, User } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 
+import { theme } from "./app/(auth)/theme";
 import { verifyPassword } from "./lib/server-utils";
 import { findUserByEmail } from "./lib/service";
 
@@ -19,7 +20,13 @@ if (process.env.AUTH_GOOGLE_ID && !process.env.AUTH_GOOGLE_SECRET) {
   throw new Error("AUTH_GOOGLE_SECRET is required when AUTH_GOOGLE_ID is set");
 }
 
-const config = {
+const config: NextAuthConfig = {
+  theme: {
+    colorScheme: "auto",
+    logo: "/logos/grey-matter-logo.png",
+    brandColor: theme.light.buttonBackground,
+    buttonText: theme.light.buttonText,
+  },
   providers: [
     ...(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET
       ? [
