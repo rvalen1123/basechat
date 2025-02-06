@@ -1,19 +1,21 @@
-import assert from "assert";
-
 import { and, desc, eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 
+import { APIError } from "@/lib/api-error";
 import db from "@/lib/db";
 import * as schema from "@/lib/db/schema";
+import { ApiContext, withMiddleware } from "@/lib/middleware";
 import { requireAuthContext } from "@/lib/server-utils";
 
 const createConversationRequest = z.object({ title: z.string() });
 
-export async function POST(request: NextRequest) {
+async function handlePost(req: NextRequest, context: ApiContext<z.infer<typeof createConversationRequest>>) {
   const { profile, tenant } = await requireAuthContext();
-  const json = await request.json();
-  const { title } = createConversationRequest.parse(json);
+  if (!context.data) {
+    throw APIError.badRequest("Missing request data");
+  }
+  const { title } = context.data;
 
   const rs = await db
     .insert(schema.conversations)
@@ -24,11 +26,17 @@ export async function POST(request: NextRequest) {
     })
     .returning();
 
-  assert(rs.length === 1);
-  return Response.json({ id: rs[0].id });
+  if (!rs.length) {
+    throw APIError.internal("Failed to create conversation");
+  }
+
+  return Response.json({
+    status: "success",
+    data: { id: rs[0].id },
+  });
 }
 
-export async function GET(request: NextRequest) {
+async function handleGet(req: NextRequest, context: ApiContext) {
   const { profile, tenant } = await requireAuthContext();
 
   const rs = await db
@@ -42,5 +50,17 @@ export async function GET(request: NextRequest) {
     .where(and(eq(schema.conversations.tenantId, tenant.id), eq(schema.conversations.profileId, profile.id)))
     .orderBy(desc(schema.conversations.createdAt));
 
-  return Response.json(rs);
+  return Response.json({
+    status: "success",
+    data: rs,
+  });
 }
+
+export const POST = withMiddleware(handlePost, {
+  rateLimit: true,
+  validation: createConversationRequest,
+});
+
+export const GET = withMiddleware(handleGet, {
+  rateLimit: true,
+});
