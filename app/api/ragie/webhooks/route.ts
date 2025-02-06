@@ -1,4 +1,4 @@
-import crypto from "crypto";
+import { createHmac } from "crypto";
 
 import { NextRequest } from "next/server";
 
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
   }
 
   const rawBody = await request.text();
-  const hmac = crypto.createHmac("sha256", settings.RAGIE_WEBHOOK_SECRET);
+  const hmac = createHmac("sha256", settings.RAGIE_WEBHOOK_SECRET);
   const digest = hmac.update(rawBody).digest("base64");
 
   if (digest !== signature) {
