@@ -1,9 +1,9 @@
+"use client";
+
 import { PencilSquareIcon, PlusIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-
-("use client");
 
 interface Note {
   id: string;
