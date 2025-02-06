@@ -1,14 +1,13 @@
 import type { Config } from "drizzle-kit";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export default {
+  // @ts-ignore - drizzle-kit doesn't export proper pg types
   schema: "./lib/db/schema.ts",
   out: "./drizzle",
-  driver: "d1-http",
-  dialect: "sqlite",
+  driver: "pg",
   dbCredentials: {
-    accountId: process.env.CF_ACCOUNT_ID || "",
-    databaseId: process.env.DATABASE_ID || "",
-    token: process.env.CF_API_TOKEN || "",
+    connectionString: process.env.POSTGRES_URL,
   },
   strict: true,
 } satisfies Config;
