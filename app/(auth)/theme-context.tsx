@@ -4,7 +4,8 @@ import { createContext, useContext, useState, ReactNode, useEffect } from "react
 
 import { theme } from "./theme";
 
-const STORAGE_KEY = "theme-preference";
+const STORAGE_KEY = "theme-mode";
+const DARK_CLASS = "dark";
 
 type ThemeContextType = {
   isDark: boolean;
@@ -15,21 +16,24 @@ type ThemeContextType = {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [isDark, setIsDark] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem(STORAGE_KEY) === "dark";
-    }
-    return false;
-  });
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    // Check system preference and localStorage on mount
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const storedTheme = localStorage.getItem(STORAGE_KEY);
+    setIsDark(storedTheme === DARK_CLASS || (!storedTheme && prefersDark));
+  }, []);
 
   useEffect(() => {
     const root = window.document.documentElement;
     if (isDark) {
-      root.classList.add("dark");
+      root.classList.add(DARK_CLASS);
+      localStorage.setItem(STORAGE_KEY, DARK_CLASS);
     } else {
-      root.classList.remove("dark");
+      root.classList.remove(DARK_CLASS);
+      localStorage.setItem(STORAGE_KEY, "light");
     }
-    localStorage.setItem(STORAGE_KEY, isDark ? "dark" : "light");
   }, [isDark]);
 
   const toggleTheme = () => setIsDark(!isDark);

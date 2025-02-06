@@ -34,11 +34,14 @@ export default function RootLayout({
     <SessionProvider>
       <Providers>
         <GlobalStateProvider>
-          <html lang="en" className="h-full w-full">
+          <html lang="en" suppressHydrationWarning className="h-full w-full">
             <head>
               <link rel="icon" href="/logos/PNG-01.png" />
             </head>
-            <body className={cn("min-h-screen bg-background font-sans antialiased h-full w-full", fontSans.variable)}>
+            <body
+              suppressHydrationWarning
+              className={cn("min-h-screen bg-background font-sans antialiased h-full w-full", fontSans.variable)}
+            >
               {children}
               <Toaster
                 position="bottom-center"
