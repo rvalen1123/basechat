@@ -18,8 +18,7 @@ export type ApiHandler<T = undefined> = (req: NextRequest, context: ApiContext<T
 export function withErrorHandling<T>(handler: ApiHandler<T>): ApiHandler<T> {
   return async (req, context) => {
     try {
-      const response = await handler(req, context);
-      return response;
+      return await handler(req, context);
     } catch (error) {
       if (error instanceof ZodError) {
         return Response.json(

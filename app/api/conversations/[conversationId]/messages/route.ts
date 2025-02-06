@@ -1,106 +1,66 @@
-// This file handles API routes for the collection of messages within a conversation
-// GET /api/conversations/[conversationId]/messages - Fetch all messages for a conversation
-// POST /api/conversations/[conversationId]/messages - Create a new message in a conversation
-import { CoreMessage } from "ai";
-import assertNever from "assert-never";
 import { NextRequest } from "next/server";
 
-import { createConversationMessage, getConversation, getConversationMessages } from "@/lib/data-access/conversation";
-import { conversationMessagesResponseSchema, createConversationMessageRequestSchema } from "@/lib/schema";
-import { requireAuthContext } from "@/lib/server-utils";
+import { auth } from "@/auth";
+import { APIError } from "@/lib/api-error";
+import { withMiddleware } from "@/lib/middleware";
+import { getMessages, getUserAccess, handleMessage } from "@/lib/services/chat";
+import { createMessageSchema } from "@/lib/types/chat";
 
-import {
-  EXPAND_MESSAGE_CONTENT,
-  generate,
-  getExpandSystemPrompt,
-  getGroundingSystemPrompt,
-  getRetrievalSystemPrompt,
-} from "./utils";
-
-export async function GET(_request: NextRequest, { params }: { params: { conversationId: string } }) {
-  const { profile, tenant } = await requireAuthContext();
-
-  if (!tenant?.id || !profile?.id) {
-    throw new Error("Missing required auth data");
+async function handleGet(request: NextRequest, context: { params: Record<string, string | string[]> }) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw APIError.unauthorized("Not authenticated");
   }
-  const messages = await getConversationMessages(tenant.id, profile.id, params.conversationId);
 
-  return Response.json(conversationMessagesResponseSchema.parse(messages));
+  const conversationId = context.params.conversationId as string;
+  if (!conversationId) {
+    throw APIError.badRequest("Missing conversation ID");
+  }
+
+  const messages = await getMessages(session.user.id, conversationId);
+
+  return Response.json({
+    status: "success",
+    data: messages,
+  });
 }
 
-export async function POST(request: NextRequest, { params }: { params: { conversationId: string } }) {
-  const { profile, tenant } = await requireAuthContext();
-
-  if (!tenant?.id || !profile?.id || !tenant?.name) {
-    throw new Error("Missing required auth data");
-  }
-  const json = await request.json();
-
-  const { content } = createConversationMessageRequestSchema.parse(json);
-
-  const conversation = await getConversation(tenant.id, profile.id, params.conversationId);
-  const existing = await getConversationMessages(tenant.id, profile.id, conversation.id);
-
-  if (!existing.length) {
-    await createConversationMessage({
-      tenantId: tenant.id,
-      conversationId: conversation.id,
-      role: "system",
-      content: getGroundingSystemPrompt(tenant.name),
-      sources: [],
-    });
+async function handlePost(request: NextRequest, context: { params: Record<string, string | string[]>; data?: unknown }) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw APIError.unauthorized("Not authenticated");
   }
 
-  await createConversationMessage({
-    tenantId: tenant.id,
-    conversationId: conversation.id,
-    role: "user",
+  const conversationId = context.params.conversationId as string;
+  if (!conversationId) {
+    throw APIError.badRequest("Missing conversation ID");
+  }
+
+  if (!context.data) {
+    throw APIError.badRequest("Missing request data");
+  }
+
+  const { content } = createMessageSchema.parse(context.data);
+
+  // Get user's tenant access
+  const { tenant } = await getUserAccess(session.user.id, conversationId);
+
+  // Handle the message and get the response
+  const { stream, messageId } = await handleMessage(
+    session.user.id,
+    conversationId,
     content,
-    sources: [],
-  });
+    tenant
+  );
 
-  let sources: { documentId: string; documentName: string }[] = [];
-
-  if (content !== EXPAND_MESSAGE_CONTENT) {
-    const { content: systemMessageContent, sources: ragSources } = await getRetrievalSystemPrompt(
-      tenant.id,
-      tenant.name,
-      content,
-    );
-
-    sources = ragSources;
-
-    await createConversationMessage({
-      tenantId: tenant.id,
-      conversationId: conversation.id,
-      role: "system",
-      content: systemMessageContent,
-      sources: [],
-    });
-  } else {
-    await createConversationMessage({
-      tenantId: tenant.id,
-      conversationId: conversation.id,
-      role: "system",
-      content: getExpandSystemPrompt(),
-      sources: [],
-    });
-  }
-
-  const all = await getConversationMessages(tenant.id, profile.id, conversation.id);
-  const messages: CoreMessage[] = all.map(({ role, content }) => {
-    switch (role) {
-      case "assistant":
-        return { role: "assistant" as const, content: content ?? "" };
-      case "user":
-        return { role: "user" as const, content: content ?? "" };
-      case "system":
-        return { role: "system" as const, content: content ?? "" };
-      default:
-        assertNever(role);
-    }
-  });
-
-  const [stream, messageId] = await generate(tenant.id, profile.id, conversation.id, { messages, sources });
-  return stream.toTextStreamResponse({ headers: { "x-message-id": messageId } });
+  return stream;
 }
+
+export const GET = withMiddleware(handleGet, {
+  rateLimit: true,
+});
+
+export const POST = withMiddleware(handlePost, {
+  rateLimit: true,
+  validation: createMessageSchema,
+});

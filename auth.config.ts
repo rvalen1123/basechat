@@ -1,73 +1,21 @@
-import type { NextAuthConfig, User } from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import Google from "next-auth/providers/google";
-
-import { theme } from "./app/(auth)/theme";
-import { verifyPassword } from "./lib/server-utils";
-import { findUserByEmail } from "./lib/service";
-
-declare module "next-auth" {
-  interface User {
-    tenantId?: string;
-  }
-}
+import type { NextAuthConfig } from "next-auth";
 
 if (!process.env.AUTH_SECRET) {
   throw new Error("AUTH_SECRET environment variable is required");
 }
 
-if (process.env.AUTH_GOOGLE_ID && !process.env.AUTH_GOOGLE_SECRET) {
-  throw new Error("AUTH_GOOGLE_SECRET is required when AUTH_GOOGLE_ID is set");
-}
-
-const config: NextAuthConfig = {
-  theme: {
-    colorScheme: "auto",
-    logo: "/logos/grey-matter-logo.png",
-    brandColor: theme.light.buttonBackground,
-    buttonText: theme.light.buttonText,
-  },
-  providers: [
-    ...(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET
-      ? [
-          Google({
-            clientId: process.env.AUTH_GOOGLE_ID,
-            clientSecret: process.env.AUTH_GOOGLE_SECRET,
-          }),
-        ]
-      : []),
-    Credentials({
-      credentials: {
-        email: { type: "email", label: "Email", required: true },
-        password: { type: "password", label: "Password", required: true },
-      },
-      async authorize(credentials, _request) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
-
-        try {
-          const user = await findUserByEmail(credentials.email as string);
-          if (!user?.password) {
-            return null;
-          }
-
-          const isValid = await verifyPassword(user.password, credentials.password as string);
-          if (!isValid) {
-            return null;
-          }
-
-          return user;
-        } catch (error) {
-          console.error("Auth error:", error);
-          return null;
-        }
-      },
-    }),
-  ],
+export default {
+  providers: [],
   debug: process.env.NODE_ENV === "development",
   trustHost: true,
   secret: process.env.AUTH_SECRET,
+  pages: {
+    signIn: "/(auth)/sign-in",
+  },
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
   callbacks: {
     session({ session, token }) {
       if (token.id) {
@@ -84,7 +32,8 @@ const config: NextAuthConfig = {
       }
       return token;
     },
+    authorized({ auth }) {
+      return !!auth;
+    },
   },
 } satisfies NextAuthConfig;
-
-export default config;

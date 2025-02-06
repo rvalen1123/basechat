@@ -2,14 +2,14 @@ import { Pool } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-serverless";
 import { migrate } from "drizzle-orm/neon-serverless/migrator";
 
-// Max retries and backoff configuration
 const MAX_RETRIES = 3;
 const INITIAL_BACKOFF = 1000;
 
 async function runMigrations() {
-  const connectionString = process.env.POSTGRES_URL_NON_POOLING;
+  // Use the same connection string as the main app
+  const connectionString = process.env.POSTGRES_URL;
   if (!connectionString) {
-    throw new Error("POSTGRES_URL_NON_POOLING environment variable is required");
+    throw new Error("POSTGRES_URL environment variable is required");
   }
 
   console.log("Starting database migrations...");
@@ -19,9 +19,7 @@ async function runMigrations() {
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      await migrate(db, {
-        migrationsFolder: "drizzle",
-      });
+      await migrate(db, { migrationsFolder: "drizzle" });
       console.log("Migrations completed successfully!");
       await pool.end();
       return;

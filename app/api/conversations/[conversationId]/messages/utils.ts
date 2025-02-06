@@ -1,42 +1,64 @@
 import { openai } from "@ai-sdk/openai";
 import { CoreMessage, streamObject } from "ai";
+import { and, eq } from "drizzle-orm";
+import { z } from "zod";
 
-import { createConversationMessage, updateConversationMessageContent } from "@/lib/data-access/conversation";
+import db from "@/lib/db";
+import { schema } from "@/lib/db";
 import { getRagieClient } from "@/lib/ragie";
-import { createConversationMessageResponseSchema } from "@/lib/schema";
 
-type GenerateContext = { messages: CoreMessage[]; sources: any[] };
+type GenerateContext = {
+  messages: CoreMessage[];
+  sources: Array<{ text: string; metadata?: Record<string, unknown> }>;
+};
+
+const responseSchema = z.object({
+  content: z.string(),
+});
 
 export const EXPAND_MESSAGE_CONTENT = "Tell me more about this";
 
-export async function generate(tenantId: string, profileId: string, conversationId: string, context: GenerateContext) {
-  const pendingMessage = await createConversationMessage({
-    tenantId,
-    conversationId,
-    role: "assistant",
-    content: null,
-    sources: context.sources,
-  });
+export async function generate(userId: string, conversationId: string, context: GenerateContext) {
+  // Create pending message
+  const [message] = await db
+    .insert(schema.messages)
+    .values({
+      conversationId,
+      role: "assistant",
+      content: "",
+      sources: context.sources,
+    })
+    .returning();
+
+  if (!message) {
+    throw new Error("Failed to create message");
+  }
 
   const result = streamObject({
     messages: context.messages,
-    model: openai("gpt-4o"),
+    model: openai("gpt-4"),
     temperature: 0.3,
-    schema: createConversationMessageResponseSchema,
+    schema: responseSchema,
+    output: "object",
     onFinish: async (event) => {
       if (!event.object) {
         return;
       }
-      await updateConversationMessageContent(
-        tenantId,
-        profileId,
-        conversationId,
-        pendingMessage.id,
-        event.object.message,
-      );
+
+      const response = responseSchema.parse(event.object);
+      await db
+        .update(schema.messages)
+        .set({ content: response.content })
+        .where(
+          and(
+            eq(schema.messages.id, message.id),
+            eq(schema.messages.conversationId, conversationId)
+          )
+        );
     },
   });
-  return [result, pendingMessage.id] as const;
+
+  return [result, message.id] as const;
 }
 
 export async function getRetrievalSystemPrompt(tenantId: string, name: string, query: string) {
@@ -47,53 +69,56 @@ export async function getRetrievalSystemPrompt(tenantId: string, name: string, q
     rerank: true,
   });
 
-  console.log(`ragie response includes ${response.scoredChunks.length} chunk(s)`);
-
-  const chunks = JSON.stringify(response);
-
   const sources = response.scoredChunks.map((chunk) => ({
-    ...chunk.documentMetadata,
-    documentId: chunk.documentId,
-    documentName: chunk.documentName,
+    text: chunk.text,
+    metadata: {
+      documentId: chunk.documentId,
+      documentName: chunk.documentName,
+      ...chunk.documentMetadata,
+    },
   }));
 
-  return { content: getSystemPrompt(name, chunks), sources };
+  return {
+    content: getSystemPrompt(name, JSON.stringify(response)),
+    sources,
+  };
 }
 
 export function getGroundingSystemPrompt(company: string) {
-  return `These are your instructions, they are very important to follow:
-You are ${company}'s helpful AI assistant.
-You should be succinct and original. Give a response in less than three sentences and actively refer to you cited work. Do not use the word "delve" and try to sound as professional as possible.
+  return `You are ${company}'s AI assistant. Your responses should be:
+- Professional and succinct (3 sentences or less)
+- Based on provided sources when available
+- Focused on business context and knowledge base
+- Free from personal opinions or speculation
 
-When you respond, please directly refer to the sources provided.
+DO NOT:
+- Use humor or informal language
+- Engage in personal conversations
+- Make assumptions about unavailable information
+- Generate creative content (songs, jokes, poetry)
 
-If the user asked for a search and there are no results, make sure to let the user know that you couldn't find anything,
-and what they might be able to do to find the information they need. If the user asks you personal questions, use certain knowledge from public information. Do not attempt to guess personal information; maintain a professional tone and politely refuse to answer personal questions that are inappropriate for an interview format.
-
-Remember you are a serious assistant, so maintain a professional tone and avoid humor or sarcasm. You are here to provide serious analysis and insights. Do not entertain or engage in personal conversations. NEVER sing songs, tell jokes, or write poetry.
-`;
+If no relevant information is found, acknowledge this and suggest how to refine the query.`;
 }
 
 function getSystemPrompt(company: string, chunks: string) {
-  return `Here are relevant chunks from ${company}'s knowledge base that you can use to respond to the user. Remember to incorporate these insights into your responses.
+  return `Here are relevant sections from ${company}'s knowledge base:
 ${chunks}
-You should be succinct, original, and speak in a professional tone. Give a response in less than three sentences and actively refer to the knowledge base. Do not use the word "delve" and try to sound as professional as possible.
 
-Remember to maintain a professional tone and avoid humor or sarcasm. You are here to provide serious analysis and insights. Do not entertain or engage in personal conversations.
+Provide a concise, professional response that:
+- Directly references this information
+- Stays under 3 sentences
+- Maintains formal business tone
+- Focuses only on factual content
 
-IMPORTANT RULES:
-- Be concise
-- REFUSE to sing songs
-- REFUSE to tell jokes
-- REFUSE to write poetry
-- AVOID responding with lists
-- DECLINE responding to nonsense messages
-- ONLY provide analysis and insights related to the knowledge base
-- NEVER include citations in your response`;
+DO NOT:
+- Include explicit citations
+- Use lists or bullet points
+- Engage in creative writing
+- Respond to off-topic queries`;
 }
 
 export function getExpandSystemPrompt() {
-  return `
-The user would like you to provide more information on the the last topic. Please provide a more detailed response. Re-use the information you have already been provided and expand on your previous response. Your response may be longer than typical. You do not need to note the sources you used again.
-`;
+  return `Provide additional detail on the previous topic using the same source information. 
+You may give a longer response but maintain the same professional tone and factual focus.
+Do not repeat citations or restate basic context.`;
 }
