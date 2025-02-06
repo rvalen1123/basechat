@@ -5,15 +5,17 @@ import { requireAuthContext } from "@/lib/server-utils";
 
 export const dynamic = "force-dynamic"; // no caching
 
-interface Params {
-  connectionId: string;
-}
+type Props = {
+  params: {
+    connectionId: string;
+  };
+};
 
-export async function GET(_request: NextRequest, { params }: { params: Params }) {
+export async function GET(request: NextRequest, props: Props) {
   await requireAuthContext();
 
   const client = getRagieClient();
-  const connection = await client.connections.get({ connectionId: params.connectionId });
+  const connection = await client.connections.get({ connectionId: props.params.connectionId });
 
   return Response.json(connection);
 }
