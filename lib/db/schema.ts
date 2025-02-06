@@ -89,6 +89,15 @@ export const profiles = pgTable(
 
 export const rolesEnum = pgEnum("roles", ["assistant", "system", "user"]);
 
+export const notes = pgTable("notes", {
+  ...baseTenantFields,
+  profileId: uuid("profile_id")
+    .references(() => profiles.id, { onDelete: "cascade" })
+    .notNull(),
+  title: text("title").notNull(),
+  content: text("content"),
+});
+
 export const messages = pgTable("messages", {
   ...baseTenantFields,
   conversationId: uuid("conversation_id")
