@@ -5,6 +5,7 @@ export default {
   providers: [],
   debug: process.env.NODE_ENV === "development",
   trustHost: true,
+  secret: process.env.AUTH_SECRET,
   callbacks: {
     session({ session, token }) {
       session.user.id = token.id;
