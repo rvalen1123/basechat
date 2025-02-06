@@ -1,0 +1,6 @@
+export enum AppLocation {
+  HOME = "HOME",
+  DOCUMENTS = "DOCUMENTS",
+  NOTES = "NOTES",
+  CONVERSATIONS = "CONVERSATIONS",
+}

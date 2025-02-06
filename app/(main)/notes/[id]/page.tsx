@@ -1,76 +1,47 @@
-"use client";
+import { NoteClient } from "@/app/(main)/notes/[id]/note-client";
+import { authOrRedirect } from "@/lib/server-utils";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import Main from "../../layout";
+import { AppLocation } from "../../types";
 
-import { NoteEditor } from "../components/note-editor";
+/**
+ * NOTE:
+ * 1. This file is a server component because we declare the function as async.
+ * 2. We use the same pattern as the 'ConversationPage' example, making
+ *    'params' a Promise type so Next.js 15.1.x won't complain.
+ * 3. Usually, for client rendering (useEffect, useState), place
+ *    that logic in a separate 'NoteClient' file marked "use client."
+ */
 
-interface Note {
-  id: string;
-  title: string;
-  content: string | null;
-}
+export default async function NotePage({ params }: { params: Promise<{ id: string }> }) {
+  // Get auth data and assert it exists
+  const { session, tenant } = await authOrRedirect();
 
-export default function NotePage({ params }: { params: { id: string } }) {
-  const router = useRouter();
-  const [note, setNote] = useState<Note | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  if (!session?.user?.name || !tenant?.id) {
+    throw new Error("Missing required auth data");
+  }
 
-  useEffect(() => {
-    async function loadNote() {
-      try {
-        const response = await fetch(`/api/notes/${params.id}`);
-        if (!response.ok) {
-          throw new Error("Failed to load note");
-        }
-        const data = await response.json();
-        setNote(data);
-      } catch (error) {
-        console.error("Error loading note:", error);
-        toast.error("Failed to load note");
-        router.push("/notes");
-      } finally {
-        setIsLoading(false);
-      }
-    }
+  // Retrieve the route param "id":
+  const { id } = await params;
 
-    loadNote();
-  }, [params.id, router]);
+  // Here you can fetch data from a DB, for example:
+  // const note = await fetchNoteById(id); // Pseudocode
 
-  const handleSave = async (title: string, content: string) => {
-    try {
-      const response = await fetch(`/api/notes/${params.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ title, content }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save note");
-      }
-
-      const updatedNote = await response.json();
-      setNote(updatedNote);
-    } catch (error) {
-      console.error("Error saving note:", error);
-      toast.error("Failed to save note");
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-sm text-gray-400">Loading...</div>
+  return (
+    <Main currentTenantId={tenant.id} name={session.user.name} appLocation={AppLocation.NOTES}>
+      <div className="py-10">
+        <div className="px-4 sm:px-6 lg:px-8">
+          <div className="sm:flex sm:items-center">
+            <div className="sm:flex-auto">
+              <h1 className="text-base/7 font-semibold text-white">Note Details</h1>
+              <p className="mt-2 text-sm text-gray-400">View and edit note information.</p>
+            </div>
+          </div>
+          <div className="mt-8">
+            <NoteClient noteId={id} />
+          </div>
+        </div>
       </div>
-    );
-  }
-
-  if (!note) {
-    return null;
-  }
-
-  return <NoteEditor initialTitle={note.title} initialContent={note.content || ""} onSave={handleSave} />;
+    </Main>
+  );
 }
