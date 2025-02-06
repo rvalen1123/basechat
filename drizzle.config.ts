@@ -1,15 +1,14 @@
-import { defineConfig } from "drizzle-kit";
+import type { Config } from "drizzle-kit";
 
-import * as settings from "./lib/settings";
-
-export default defineConfig({
+export default {
   schema: "./lib/db/schema.ts",
   out: "./drizzle",
-  driver: "postgres",
+  driver: "d1-http",
+  dialect: "sqlite",
   dbCredentials: {
-    connectionString: settings.POSTGRES_URL_NON_POOLING,
-    ssl: true,
+    accountId: process.env.CF_ACCOUNT_ID || "",
+    databaseId: process.env.DATABASE_ID || "",
+    token: process.env.CF_API_TOKEN || "",
   },
-  verbose: true,
   strict: true,
-});
+} satisfies Config;
