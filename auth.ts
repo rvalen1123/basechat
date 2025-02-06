@@ -20,13 +20,8 @@ declare module "next-auth" {
     user: {
       /** User ID should always exist on the session */
       id: string;
-
-      /**
-       * By default, TypeScript merges new interface properties and overwrites existing ones.
-       * In this case, the default session user properties will be overwritten,
-       * with the new ones defined above. To keep the default session user properties,
-       * you need to add them back into the newly declared interface.
-       */
+      /** Tenant ID may exist on the session */
+      tenantId?: string;
     } & DefaultSession["user"];
   }
 }
@@ -37,32 +32,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     signIn: "/(auth)/sign-in",
   },
   secret: process.env.AUTH_SECRET,
-  providers: [
-    Google({
-      clientId: process.env.AUTH_GOOGLE_ID!,
-      clientSecret: process.env.AUTH_GOOGLE_SECRET!,
-    }),
-    Credentials({
-      credentials: {
-        email: {},
-        password: {},
-      },
-      authorize: async (credentials: Partial<{ email: unknown; password: unknown }>) => {
-        const user = await findUserByEmail(credentials.email as string);
-        if (!user) {
-          throw new Error("Invalid credentials.");
-        }
-        if (!user.password) {
-          throw new Error("Invalid credentials.");
-        }
-        const isValid = await verifyPassword(user.password, credentials.password as string);
-        if (!isValid) {
-          throw new Error("Invalid credentials.");
-        }
-        return user;
-      },
-    }),
-  ],
+  providers: authConfig.providers,
   adapter: DrizzleAdapter(db, {
     usersTable: schema.users,
     accountsTable: schema.accounts,
@@ -74,22 +44,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     ...authConfig.callbacks,
     authorized: ({ auth }) => !!auth,
     async jwt({ token, user, trigger, session }) {
-      switch (trigger) {
-        case "signIn":
-        case "signUp":
-          if (user) {
-            assert(user.id, "expected AdapterUser");
-            token.id = user.id;
-            const tenant = await getFirstTenantByUserId(user.id);
-            token.tenantId = tenant ? tenant.id : null;
-          }
-          break;
-        case "update":
-          break;
-        case undefined:
-          break;
-        default:
-          assertNever(trigger);
+      if ((trigger === "signIn" || trigger === "signUp") && user) {
+        assert(user.id, "expected AdapterUser");
+        token.id = user.id;
+        const tenant = await getFirstTenantByUserId(user.id);
+        if (tenant) {
+          token.tenantId = tenant.id;
+        }
       }
       return token;
     },

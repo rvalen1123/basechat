@@ -24,7 +24,9 @@ export async function generate(tenantId: string, profileId: string, conversation
     temperature: 0.3,
     schema: createConversationMessageResponseSchema,
     onFinish: async (event) => {
-      if (!event.object) return;
+      if (!event.object) {
+        return;
+      }
       await updateConversationMessageContent(
         tenantId,
         profileId,

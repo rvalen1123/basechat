@@ -17,22 +17,28 @@ import {
   getRetrievalSystemPrompt,
 } from "./utils";
 
-export async function GET(_request: NextRequest, { params }: { params: Promise<{ conversationId: string }> }) {
+export async function GET(_request: NextRequest, { params }: { params: { conversationId: string } }) {
   const { profile, tenant } = await requireAuthContext();
-  const { conversationId } = await params;
-  const messages = await getConversationMessages(tenant.id, profile.id, conversationId);
+
+  if (!tenant?.id || !profile?.id) {
+    throw new Error("Missing required auth data");
+  }
+  const messages = await getConversationMessages(tenant.id, profile.id, params.conversationId);
 
   return Response.json(conversationMessagesResponseSchema.parse(messages));
 }
 
-export async function POST(request: NextRequest, { params }: { params: Promise<{ conversationId: string }> }) {
+export async function POST(request: NextRequest, { params }: { params: { conversationId: string } }) {
   const { profile, tenant } = await requireAuthContext();
-  const { conversationId } = await params;
+
+  if (!tenant?.id || !profile?.id || !tenant?.name) {
+    throw new Error("Missing required auth data");
+  }
   const json = await request.json();
 
   const { content } = createConversationMessageRequestSchema.parse(json);
 
-  const conversation = await getConversation(tenant.id, profile.id, conversationId);
+  const conversation = await getConversation(tenant.id, profile.id, params.conversationId);
   const existing = await getConversationMessages(tenant.id, profile.id, conversation.id);
 
   if (!existing.length) {

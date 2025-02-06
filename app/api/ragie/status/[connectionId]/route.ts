@@ -10,11 +10,15 @@ interface Params {
   connectionId: string;
 }
 
-export async function GET(_request: NextRequest, { params }: { params: Promise<Params> }) {
+export async function GET(_request: NextRequest, { params }: { params: Params }) {
   try {
-    await requireAuthContext();
+    const { tenant } = await requireAuthContext();
 
-    const { connectionId } = await params;
+    if (!tenant?.id) {
+      throw new Error("Missing required tenant data");
+    }
+
+    const { connectionId } = params;
     const validatedParams = z
       .object({
         connectionId: z.string(),

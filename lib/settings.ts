@@ -25,5 +25,5 @@ export const SMTP_FROM = process.env.SMTP_FROM!;
 export const SMTP_HOST = process.env.SMTP_HOST!;
 export const SMTP_PORT = Number(process.env.SMTP_PORT!);
 export const SMTP_SECURE = process.env.SMTP_SECURE === "1";
-export const SMTP_USER = process.env.SMTP_USER;
-export const SMTP_PASSWORD = process.env.SMTP_PASSWORD;
+export const { SMTP_USER } = process.env;
+export const { SMTP_PASSWORD } = process.env;

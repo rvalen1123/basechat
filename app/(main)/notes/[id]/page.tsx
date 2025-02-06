@@ -1,19 +1,14 @@
-import { NoteClient } from "@/app/(main)/notes/[id]/note-client";
+import { notFound } from "next/navigation";
+
+import { getNote } from "@/lib/data-access/notes";
 import { authOrRedirect } from "@/lib/server-utils";
 
 import Main from "../../layout";
 import { AppLocation } from "../../types";
 
-/**
- * NOTE:
- * 1. This file is a server component because we declare the function as async.
- * 2. We use the same pattern as the 'ConversationPage' example, making
- *    'params' a Promise type so Next.js 15.1.x won't complain.
- * 3. Usually, for client rendering (useEffect, useState), place
- *    that logic in a separate 'NoteClient' file marked "use client."
- */
+import { NoteClient } from "./note-client";
 
-export default async function NotePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function NotePage({ params }: { params: { id: string } }) {
   // Get auth data and assert it exists
   const { session, tenant } = await authOrRedirect();
 
@@ -21,11 +16,12 @@ export default async function NotePage({ params }: { params: Promise<{ id: strin
     throw new Error("Missing required auth data");
   }
 
-  // Retrieve the route param "id":
-  const { id } = await params;
+  // Fetch note data
+  const note = await getNote(params.id);
 
-  // Here you can fetch data from a DB, for example:
-  // const note = await fetchNoteById(id); // Pseudocode
+  if (!note) {
+    notFound();
+  }
 
   return (
     <Main currentTenantId={tenant.id} name={session.user.name} appLocation={AppLocation.NOTES}>
@@ -38,7 +34,7 @@ export default async function NotePage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
           <div className="mt-8">
-            <NoteClient noteId={id} />
+            <NoteClient noteId={note.id} initialData={note} />
           </div>
         </div>
       </div>

@@ -7,10 +7,18 @@ import { requireAuthContext } from "@/lib/server-utils";
 
 type Params = { conversationId: string; messageId: string };
 
-export async function GET(_request: NextRequest, { params }: { params: Promise<Params> }) {
+export async function GET(_request: NextRequest, { params }: { params: Params }) {
   const { profile, tenant } = await requireAuthContext();
-  const { conversationId, messageId } = await params;
-  const message = await getConversationMessage(tenant.id, profile.id, conversationId, messageId);
+
+  if (!tenant?.id || !profile?.id) {
+    throw new Error("Missing required auth data");
+  }
+
+  const message = await getConversationMessage(tenant.id, profile.id, params.conversationId, params.messageId);
+
+  if (!message) {
+    return new Response(null, { status: 404 });
+  }
 
   return Response.json(message);
 }

@@ -11,11 +11,14 @@ interface Params {
   type: string;
 }
 
-export async function GET(_request: NextRequest, { params }: { params: Promise<Params> }) {
+export async function GET(_request: NextRequest, { params }: { params: Params }) {
   const { tenant } = await requireAuthContext();
 
+  if (!tenant?.id) {
+    throw new Error("Missing required tenant data");
+  }
+
   const client = getRagieClient();
-  const { type } = await params;
 
   const payload = await client.connections.createOAuthRedirectUrl({
     redirectUri: [settings.BASE_URL, "api/ragie/callback"].join("/"),

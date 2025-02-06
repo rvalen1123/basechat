@@ -50,7 +50,9 @@ export async function deleteConnection(tenantId: string, id: string) {
         deleteConnectionPayload: { keepFiles: false },
       });
     } catch (e: any) {
-      if (e.rawResponse.status !== 404) throw e;
+      if (e.rawResponse.status !== 404) {
+        throw e;
+      }
       console.warn("connection missing in Ragie");
     }
   });
@@ -203,13 +205,12 @@ async function getInviteById(id: string) {
 export async function acceptInvite(userId: string, inviteId: string) {
   const invite = await getInviteById(inviteId);
 
-  const profile = await db.transaction(async (tx) => {
+  return await db.transaction(async (tx) => {
     const rs = await tx.insert(schema.profiles).values({ tenantId: invite.tenantId, userId }).returning();
     await tx.delete(schema.invites).where(eq(schema.invites.id, inviteId));
     assert(rs.length === 1, "expected new profile");
     return rs[0];
   });
-  return profile;
 }
 
 export async function getTenantsByUserId(userId: string) {
@@ -250,7 +251,9 @@ export async function findUserByEmail(email: string) {
 
 export async function sendResetPasswordVerification(email: string) {
   const user = await findUserByEmail(email);
-  if (!user) return false;
+  if (!user) {
+    return false;
+  }
 
   assert(user.email, "expected not null email address");
 

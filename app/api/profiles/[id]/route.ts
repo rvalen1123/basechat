@@ -3,9 +3,13 @@ import { NextRequest } from "next/server";
 import { requireAuthContext } from "@/lib/server-utils";
 import { deleteProfileById } from "@/lib/service";
 
-export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
   const { tenant } = await requireAuthContext();
-  const { id } = await params;
-  await deleteProfileById(tenant.id, id);
+
+  if (!tenant?.id) {
+    throw new Error("Missing required tenant data");
+  }
+
+  await deleteProfileById(tenant.id, params.id);
   return new Response(null, { status: 200 });
 }
