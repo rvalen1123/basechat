@@ -54,10 +54,13 @@
   }
 }
 
-@layer base {
-  * {
-    @apply border-border;
+@layer components {
+  .border-border {
+    @apply border-gray-200;
   }
+}
+
+@layer base {
   body {
     @apply bg-background text-foreground;
   }

@@ -1,3 +1,5 @@
+// This file handles API routes for individual messages within a conversation
+// GET /api/conversations/[conversationId]/messages/[messageId] - Fetch a single message by ID
 import { NextRequest } from "next/server";
 
 import { getConversationMessage } from "@/lib/data-access/conversation";

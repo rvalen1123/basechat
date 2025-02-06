@@ -1,3 +1,6 @@
+// This file handles API routes for the collection of messages within a conversation
+// GET /api/conversations/[conversationId]/messages - Fetch all messages for a conversation
+// POST /api/conversations/[conversationId]/messages - Create a new message in a conversation
 import { CoreMessage } from "ai";
 import assertNever from "assert-never";
 import { NextRequest } from "next/server";
