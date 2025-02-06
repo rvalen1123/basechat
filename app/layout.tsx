@@ -1,12 +1,18 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
+import { Inter as FontSans } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
 import { Toaster } from "sonner";
 
+import { cn } from "@/lib/utils";
+
 import { GlobalStateProvider } from "./(main)/context";
 
-const inter = Inter({ subsets: ["latin"] });
+import "./globals.css";
+
+const fontSans = FontSans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
 
 export const dynamic = "force-dynamic";
 
@@ -30,9 +36,20 @@ export default function RootLayout({
           <head>
             <link rel="icon" href="/logos/PNG-01.png" />
           </head>
-          <body className={`${inter.className} antialiased h-full w-full bg-[#f8f9fa]`}>
+          <body className={cn("min-h-screen bg-background font-sans antialiased h-full w-full", fontSans.variable)}>
             {children}
-            <Toaster position="bottom-center" />
+            <Toaster
+              position="bottom-center"
+              toastOptions={{
+                classNames: {
+                  toast: "bg-background text-foreground border border-border shadow-lg",
+                  title: "text-sm font-medium",
+                  description: "text-sm text-muted-foreground",
+                  actionButton: "bg-primary text-primary-foreground",
+                  cancelButton: "bg-muted text-muted-foreground",
+                },
+              }}
+            />
           </body>
         </html>
       </GlobalStateProvider>

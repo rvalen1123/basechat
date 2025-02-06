@@ -5,9 +5,11 @@ export default {
   // @ts-ignore - drizzle-kit doesn't export proper pg types
   schema: "./lib/db/schema.ts",
   out: "./drizzle",
-  driver: "pg",
+  driver: "d1-http",
   dbCredentials: {
-    connectionString: process.env.POSTGRES_URL,
+    accountId: process.env.ACCOUNT_ID ?? "defaultAccountId",
+    databaseId: process.env.DATABASE_ID ?? "defaultDatabaseId",
+    token: process.env.TOKEN ?? "defaultToken",
   },
   strict: true,
 } satisfies Config;
