@@ -1,12 +1,10 @@
 import { createHmac } from "crypto";
 
-import { NextRequest } from "next/server";
-
 import { getRagieClient } from "@/lib/ragie";
 import { saveConnection } from "@/lib/service";
 import * as settings from "@/lib/settings";
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   const signature = request.headers.get("x-ragie-signature");
   if (!signature) {
     return new Response("Missing signature", { status: 401 });
