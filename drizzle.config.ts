@@ -1,14 +1,15 @@
-import assert from "assert";
-
 import { defineConfig } from "drizzle-kit";
 
-import "dotenv";
-
-assert(process.env.DATABASE_URL);
-const DATABASE_URL = process.env.DATABASE_URL;
+import * as settings from "./lib/settings";
 
 export default defineConfig({
-  dialect: "postgresql",
   schema: "./lib/db/schema.ts",
-  dbCredentials: { url: DATABASE_URL },
+  out: "./drizzle",
+  driver: "postgres",
+  dbCredentials: {
+    connectionString: settings.POSTGRES_URL_NON_POOLING,
+    ssl: true,
+  },
+  verbose: true,
+  strict: true,
 });

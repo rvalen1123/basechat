@@ -7,8 +7,10 @@ export const COMPANY_NAME = "Acme Corp";
 // assert(process.env.BASE_URL);
 export const BASE_URL = process.env.BASE_URL!;
 
-// assert(process.env.DATABASE_URL);
+// Database URLs
 export const DATABASE_URL = process.env.DATABASE_URL!;
+export const POSTGRES_URL = process.env.POSTGRES_URL!;
+export const POSTGRES_URL_NON_POOLING = process.env.POSTGRES_URL_NON_POOLING!;
 
 // assert(process.env.RAGIE_API_BASE_URL);
 export const RAGIE_API_BASE_URL = process.env.RAGIE_API_BASE_URL!;
