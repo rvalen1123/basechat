@@ -1,4 +1,5 @@
 import { Inter } from "next/font/google";
+import Image from "next/image";
 
 import * as schema from "@/lib/db/schema";
 import { getInitials } from "@/lib/utils";
@@ -23,8 +24,8 @@ export default function Welcome({ tenant, className }: Props) {
   return (
     <div className={className} suppressHydrationWarning>
       <div className={`h-full flex flex-col justify-center ${inter.className}`} suppressHydrationWarning>
-        <div className="h-[100px] mb-8">
-          <img src="/logos/PNG-01.png" alt="Grey Matter Group" className="h-full w-auto" />
+        <div className="h-[100px] mb-8 relative">
+          <Image src="/logos/PNG-01.png" alt="Grey Matter Group" fill priority className="object-contain" />
         </div>
         <h1 className="mb-12 text-[40px] font-bold leading-[50px]">
           Welcome to Grey Matter Group AI
